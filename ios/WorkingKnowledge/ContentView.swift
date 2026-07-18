@@ -7,19 +7,22 @@ import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        TabView {
-            SubjectsView()
-                .tabItem { Label("Palace", systemImage: "building.columns.fill") }
+        VStack(spacing: 0) {
+            DebugTopBar()
+            TabView {
+                SubjectsView()
+                    .tabItem { Label("Palace", systemImage: "building.columns.fill") }
 
-            AskView()
-                .tabItem { Label("Ask", systemImage: "sparkles") }
+                AskView()
+                    .tabItem { Label("Ask", systemImage: "sparkles") }
 
-            SearchView()
-                .tabItem { Label("Search", systemImage: "magnifyingglass") }
+                SearchView()
+                    .tabItem { Label("Search", systemImage: "magnifyingglass") }
 
-            ToolsView()
-                .tabItem { Label("Tools", systemImage: "wrench.and.screwdriver.fill") }
+                ToolsView()
+                    .tabItem { Label("Tools", systemImage: "wrench.and.screwdriver.fill") }
+            }
+            .tint(Theme.cyan)
         }
-        .tint(Theme.cyan)
     }
 }
