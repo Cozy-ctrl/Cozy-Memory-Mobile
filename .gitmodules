@@ -1,0 +1,4 @@
+[submodule "mempalace"]
+	path = mempalace
+	url = https://github.com/cozy-ctrl/mempalace.git
+	branch = main
