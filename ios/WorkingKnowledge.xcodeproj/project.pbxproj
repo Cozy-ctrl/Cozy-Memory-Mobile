@@ -770,15 +770,15 @@
 			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm.git";
 			requirement = {
 				kind = exactVersion;
-				minimumVersion = 2.31.3;
+				version = 2.31.3;
 			};
 		};
 		XXC22B2B42B57690698642XX /* XCRemoteSwiftPackageReference "mlx-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/ml-explore/mlx-swift.git";
 			requirement = {
-				kind = upToNextMinorVersion;
-				minimumVersion = 0.31.3;
+				kind = exactVersion;
+				version = 0.31.4;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
