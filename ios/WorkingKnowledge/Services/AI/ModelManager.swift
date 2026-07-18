@@ -172,16 +172,6 @@ final class ModelManager {
         }
     }
 
-    /// On launch (real device): quietly load whatever is already on disk,
-    /// starting with the small embedder so capture-time indexing works.
-    func loadDownloadedModels() {
-        guard AIAvailability.isOnDeviceSupported else { return }
-        for spec in [ModelCatalog.textEmbedding, ModelCatalog.reranker, ModelCatalog.synthesis]
-        where spec.isDownloaded && !isLoaded(spec.role) {
-            activate(spec.role)
-        }
-    }
-
     func delete(_ role: ModelRole) {
         loadTasks[role]?.cancel()
         loadTasks[role] = nil
