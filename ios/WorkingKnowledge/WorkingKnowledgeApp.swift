@@ -30,6 +30,7 @@ struct WorkingKnowledgeApp: App {
                 .environment(askEngine)
                 .onAppear {
                     store.ingestSharedInbox()
+                    models.autoloadDownloaded()
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {

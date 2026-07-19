@@ -165,6 +165,34 @@ final class ModelManager {
         }
     }
 
+    /// Auto-activates every role whose weights are already on disk.
+    /// Called on app launch so previously-downloaded models are ready
+    /// without a trip to Model Manager. Roles that aren't downloaded yet
+    /// are left untouched. Loads are staggered so we never allocate all
+    /// three concurrently on first appear.
+    func autoloadDownloaded() {
+        guard AIAvailability.isOnDeviceSupported else { return }
+        let onDisk = ModelCatalog.all.filter { $0.isDownloaded && !isLoaded($0.role) }
+        guard !onDisk.isEmpty else { return }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            // Embedding first so indexing can start behind the others.
+            let ordered = onDisk.sorted { lhs, rhs in
+                (lhs.role == .embedding ? 0 : 1) < (rhs.role == .embedding ? 0 : 1)
+            }
+            for spec in ordered {
+                guard !self.phase(for: spec.role).isBusy else { continue }
+                self.activate(spec.role)
+                // Wait for this role to settle before starting the next,
+                // keeping peak memory bounded.
+                while self.phase(for: spec.role).isBusy {
+                    try? await Task.sleep(for: .milliseconds(200))
+                    if Task.isCancelled { return }
+                }
+            }
+        }
+    }
+
     func delete(_ role: ModelRole) {
         loadTasks[role]?.cancel()
         loadTasks[role] = nil
