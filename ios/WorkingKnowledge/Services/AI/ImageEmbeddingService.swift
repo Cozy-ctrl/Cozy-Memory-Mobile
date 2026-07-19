@@ -62,14 +62,12 @@ final class ImageEmbeddingService {
     func embed(imageAt url: URL) async throws -> [Float] {
         guard let container else { throw AIError.modelNotLoaded }
 
-        let vector: [Float] = try await container.perform { context in
+        let vector: [Float] = try await container.perform { @Sendable (context: ModelContext) async throws -> [Float] in
             var input = UserInput(chat: [.user("", images: [.url(url)])])
             input.processing.resize = CGSize(width: 512, height: 512)
             let prepared = try await context.processor.prepare(input: input)
 
-            let result = try context.model.prepare(
-                prepared, cache: [], state: nil, windowSize: nil
-            )
+            let result = try context.model.prepare(prepared, cache: [], windowSize: nil)
             guard case .logits(let output) = result else {
                 throw AIError.modelNotLoaded
             }

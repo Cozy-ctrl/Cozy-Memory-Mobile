@@ -143,7 +143,7 @@ final class IndexingService {
         defer { isIndexing = false }
 
         if force {
-            try? database.dbQueue.write { db in
+            try? await database.dbQueue.write { db in
                 try db.execute(sql: "DELETE FROM embedding WHERE ownerKind IN ('entry', 'attachmentImage')")
             }
             VectorCache.shared.invalidate()
@@ -157,7 +157,7 @@ final class IndexingService {
         defer { isIndexing = false }
 
         let indexedText = indexedEntryIds()
-        let indexedImages: Set<String> = (try? database.dbQueue.read { db in
+        let indexedImages: Set<String> = (try? await database.dbQueue.read { db in
             try String.fetchSet(
                 db,
                 sql: "SELECT DISTINCT ownerId FROM embedding WHERE ownerKind = 'attachmentImage' AND model = ?",

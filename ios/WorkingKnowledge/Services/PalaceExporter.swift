@@ -1,4 +1,5 @@
 import Foundation
+import GRDB
 
 /// "Own your data": bundles the whole palace — database, original
 /// attachments, and a README explaining both — into a single zip a person
