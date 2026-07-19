@@ -1,8 +1,18 @@
 import SwiftUI
+import UIKit
 
 /// Research-tool leaderboard: which tools actually get you answers.
 struct ToolsView: View {
     @Environment(PalaceStore.self) private var store
+
+    private struct ExportItem: Identifiable {
+        let url: URL
+        var id: String { url.absoluteString }
+    }
+
+    @State private var isExporting = false
+    @State private var exportItem: ExportItem?
+    @State private var exportError: String?
 
     private var stats: [ToolStat] {
         ToolStat.build(from: store.allEntries)
@@ -13,11 +23,11 @@ struct ToolsView: View {
             ZStack {
                 Theme.bg.ignoresSafeArea()
 
-                if stats.isEmpty {
-                    emptyState
-                } else {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 16) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        if stats.isEmpty {
+                            emptyState
+                        } else {
                             Text("What actually works")
                                 .font(.title3.weight(.bold))
                                 .tracking(-0.3)
@@ -34,13 +44,85 @@ struct ToolsView: View {
                             }
                             .padding(.top, 4)
                         }
-                        .padding(16)
-                        .padding(.bottom, 24)
+
+                        ownYourDataCard
                     }
+                    .padding(16)
+                    .padding(.bottom, 24)
                 }
             }
             .navigationTitle("Tools")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(item: $exportItem) { item in
+                ShareSheet(items: [item.url])
+            }
+            .alert(
+                "Export failed",
+                isPresented: Binding(
+                    get: { exportError != nil },
+                    set: { if !$0 { exportError = nil } }
+                )
+            ) {
+                Button("OK") { exportError = nil }
+            } message: {
+                Text(exportError ?? "")
+            }
+        }
+    }
+
+    private var ownYourDataCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "shippingbox.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(Theme.violet)
+                Text("Own your data")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.ice)
+                Spacer()
+            }
+            Text("Export the whole palace — the database, every original photo and document, and a README explaining the formats — as a zip that's readable forever, with no app required.")
+                .font(.caption)
+                .foregroundStyle(Theme.muted)
+
+            Button {
+                exportPalace()
+            } label: {
+                HStack {
+                    if isExporting {
+                        ProgressView().tint(Theme.bg)
+                    } else {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    Text(isExporting ? "Preparing export…" : "Export palace")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .foregroundStyle(Theme.bg)
+                .background(Theme.violet, in: .rect(cornerRadius: 10))
+            }
+            .disabled(isExporting)
+        }
+        .padding(14)
+        .background(Theme.surface, in: .rect(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Theme.border, lineWidth: 1)
+        )
+    }
+
+    private func exportPalace() {
+        guard !isExporting else { return }
+        isExporting = true
+        Task {
+            defer { isExporting = false }
+            do {
+                let url = try PalaceExporter.export()
+                exportItem = ExportItem(url: url)
+            } catch {
+                exportError = error.localizedDescription
+            }
         }
     }
 
@@ -86,6 +168,18 @@ struct ToolsView: View {
                 .stroke(rank == 1 ? Theme.cyan.opacity(0.35) : Theme.border, lineWidth: 1)
         )
         .shadow(color: rank == 1 ? Theme.cyan.opacity(0.1) : .clear, radius: 10, y: 5)
+    }
+
+    /// Thin wrapper around `UIActivityViewController` for handing the
+    /// exported zip to the system share sheet.
+    private struct ShareSheet: UIViewControllerRepresentable {
+        let items: [Any]
+
+        func makeUIViewController(context: Context) -> UIActivityViewController {
+            UIActivityViewController(activityItems: items, applicationActivities: nil)
+        }
+
+        func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
     }
 
     private func rateColor(_ rate: Double) -> Color {

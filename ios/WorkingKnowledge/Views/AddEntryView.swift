@@ -250,7 +250,7 @@ struct AddEntryView: View {
                     }
                 }
             }
-            Text("Photos are read on-device (OCR + vision model) so they become searchable.")
+            Text("Photos are read on-device (OCR + a direct image embedding) so they become searchable.")
                 .font(.caption2)
                 .foregroundStyle(Theme.dim)
         }

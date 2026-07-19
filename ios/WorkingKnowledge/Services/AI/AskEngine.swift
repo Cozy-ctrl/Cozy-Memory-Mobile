@@ -34,12 +34,13 @@ final class AskEngine {
         self.retrieval = RetrievalService(
             store: store,
             embedding: models.embedding,
+            imageEmbedding: models.imageEmbedding,
             reranker: models.reranker,
             indexing: models.indexing ?? IndexingService(
                 store: store,
                 database: .shared,
                 embedding: models.embedding,
-                vision: models.vision
+                imageEmbedding: models.imageEmbedding
             )
         )
     }
@@ -63,7 +64,10 @@ final class AskEngine {
         currentQuestion = ""
     }
 
-    func ask(_ rawQuestion: String) async {
+    /// - Parameter subjectId: When set, scopes retrieval (keyword, text,
+    ///   image, and temporal) to a single subject before fusion. The UI
+    ///   doesn't expose this yet, but the plumbing is complete end to end.
+    func ask(_ rawQuestion: String, subjectId: String? = nil) async {
         let question = rawQuestion.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty, !isWorking else { return }
 
@@ -75,7 +79,7 @@ final class AskEngine {
         stage = .retrieving
 
         // 1. Hybrid retrieval.
-        let candidates = await retrieval.hybridCandidates(question: question)
+        let candidates = await retrieval.hybridCandidates(question: question, subjectId: subjectId)
 
         guard !candidates.isEmpty else {
             answer = "Nothing in your palace matches this yet. Capture what you find out, and next time the answer will be waiting here."

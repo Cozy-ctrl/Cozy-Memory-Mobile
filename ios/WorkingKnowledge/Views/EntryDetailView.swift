@@ -289,14 +289,15 @@ private struct AttachmentPreviewView: View {
                         .background(Theme.surface, in: .rect(cornerRadius: 12))
                     }
 
-                    if let caption = attachment.caption, !caption.isEmpty {
-                        extractedBlock(title: "WHAT THE VISION MODEL SEES", text: caption)
-                    }
                     if let ocr = attachment.ocrText, !ocr.isEmpty {
                         extractedBlock(title: "EXTRACTED TEXT", text: ocr)
                     }
-                    if attachment.caption == nil && attachment.ocrText == nil {
-                        Text("Not analyzed yet. Analysis runs automatically — OCR everywhere, vision captions once the Qwen3-VL model is downloaded on a real iPhone.")
+                    if attachment.kind == .image {
+                        Text("This photo is embedded directly into the same visual-semantic space your questions are embedded into — no caption step, so nothing about the image is lost in translation. That embedding runs automatically once Qwen3-VL-Embedding is downloaded on a real iPhone.")
+                            .font(.caption)
+                            .foregroundStyle(Theme.dim)
+                    } else if attachment.ocrText == nil {
+                        Text("Not analyzed yet. OCR runs automatically on-device.")
                             .font(.caption)
                             .foregroundStyle(Theme.dim)
                     }

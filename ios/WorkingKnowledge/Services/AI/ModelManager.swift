@@ -27,7 +27,7 @@ final class ModelManager {
     let embedding = EmbeddingService()
     let reranker = RerankerService()
     let synthesis = SynthesisService()
-    let vision = VisionCaptionService()
+    let imageEmbedding = ImageEmbeddingService()
     private(set) var indexing: IndexingService?
 
     private let store: PalaceStore
@@ -41,7 +41,7 @@ final class ModelManager {
             store: store,
             database: database,
             embedding: embedding,
-            vision: vision
+            imageEmbedding: imageEmbedding
         )
         indexing = indexer
         refreshDiskState()
@@ -90,7 +90,7 @@ final class ModelManager {
     private func isLoaded(_ role: ModelRole) -> Bool {
         switch role {
         case .textEmbedding: return embedding.isReady
-        case .visionUnderstanding: return vision.isReady
+        case .imageEmbedding: return imageEmbedding.isReady
         case .reranker: return reranker.isReady
         case .synthesis: return synthesis.isReady
         }
@@ -149,7 +149,7 @@ final class ModelManager {
         }
         switch role {
         case .textEmbedding: try await embedding.load(progressHandler: handler)
-        case .visionUnderstanding: try await vision.load(progressHandler: handler)
+        case .imageEmbedding: try await imageEmbedding.load(progressHandler: handler)
         case .reranker: try await reranker.load(progressHandler: handler)
         case .synthesis: try await synthesis.load(progressHandler: handler)
         }
@@ -157,7 +157,7 @@ final class ModelManager {
 
     private func onModelBecameReady(_ role: ModelRole) {
         // New capability — refresh the semantic index in the background.
-        if role == .textEmbedding || role == .visionUnderstanding {
+        if role == .textEmbedding || role == .imageEmbedding {
             Task { @MainActor in
                 await indexing?.indexMissing()
             }
@@ -177,7 +177,7 @@ final class ModelManager {
         loadTasks[role] = nil
         switch role {
         case .textEmbedding: embedding.unload()
-        case .visionUnderstanding: vision.unload()
+        case .imageEmbedding: imageEmbedding.unload()
         case .reranker: reranker.unload()
         case .synthesis: synthesis.unload()
         }

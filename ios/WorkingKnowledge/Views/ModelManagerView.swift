@@ -229,6 +229,8 @@ struct ModelManagerView: View {
 
     private var indexCard: some View {
         let unindexed = models.indexing?.unindexedCount ?? 0
+        let stale = models.indexing?.staleVectorCount ?? 0
+        let canReindex = models.embedding.isReady || models.imageEmbedding.isReady
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
@@ -253,8 +255,18 @@ struct ModelManagerView: View {
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(Theme.cyan)
                     }
-                    .disabled(!models.embedding.isReady)
-                    .opacity(models.embedding.isReady ? 1 : 0.4)
+                    .disabled(!canReindex)
+                    .opacity(canReindex ? 1 : 0.4)
+                }
+            }
+            if stale > 0 {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.hot)
+                    Text("\(stale) vector\(stale == 1 ? "" : "s") were made by a model you've since swapped out — they won't match anything until you reindex.")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.hot)
                 }
             }
         }
