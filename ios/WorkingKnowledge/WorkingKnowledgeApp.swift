@@ -10,14 +10,17 @@ struct WorkingKnowledgeApp: App {
     @State private var store: PalaceStore
     @State private var models: ModelManager
     @State private var askEngine: AskEngine
+    @State private var reporter: DebugReporter
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
         let store = PalaceStore()
         let models = ModelManager(store: store)
+        let reporter = DebugReporter()
         _store = State(initialValue: store)
         _models = State(initialValue: models)
         _askEngine = State(initialValue: AskEngine(store: store, models: models))
+        _reporter = State(initialValue: reporter)
         Self.configureAppearance()
     }
 
@@ -28,13 +31,33 @@ struct WorkingKnowledgeApp: App {
                 .environment(store)
                 .environment(models)
                 .environment(askEngine)
+                .environment(reporter)
                 .onAppear {
                     store.ingestSharedInbox()
                     models.autoloadDownloaded()
+                    // Start the remote debug sink — heartbeat telemetry +
+                    // previous-launch crash-log scan. No-op if Supabase env
+                    // vars aren't injected.
+                    let telemetry = DebugTelemetry()
+                    models.attachReporter(reporter)
+                    reporter.start(telemetry: telemetry, models: models)
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         store.ingestSharedInbox()
+                        reporter.report(
+                            kind: "lifecycle",
+                            severity: .info,
+                            source: "app",
+                            message: "becameActive"
+                        )
+                    } else if newPhase == .background {
+                        reporter.report(
+                            kind: "lifecycle",
+                            severity: .info,
+                            source: "app",
+                            message: "enteredBackground"
+                        )
                     }
                 }
         }

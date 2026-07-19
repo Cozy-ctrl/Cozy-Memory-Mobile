@@ -11,6 +11,7 @@
 		XX84EABC864F37AAF2FFB5XX /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = XXFEF62212299F5A9FBB8EXX /* GRDB */; };
 		XX9750E07390B9A256B5A8XX /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = XX11DD52CC5A0DD02102BEXX /* MLXLMCommon */; };
 		XXA4CF05A96FF81C9CEF6CXX /* WorkingKnowledgeShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = XX71A9D667BB6A3FB86EDBXX /* WorkingKnowledgeShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		XXCB0C833A4E7DDE353CE0XX /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = XX17F496E7391AF4178246XX /* Supabase */; };
 		XXCDC52B63FDBCFEC4F541XX /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = XX30C36802834C82B626ABXX /* MLX */; };
 		XXDE7FA8271EC80D92A2FEXX /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = XX311F8854203ECF290F9FXX /* MLXLLM */; };
 /* End PBXBuildFile section */
@@ -106,6 +107,7 @@
 				XX7FBC0B160A2EAFF735FFXX /* MLXVLM in Frameworks */,
 				XX9750E07390B9A256B5A8XX /* MLXLMCommon in Frameworks */,
 				XXCDC52B63FDBCFEC4F541XX /* MLX in Frameworks */,
+				XXCB0C833A4E7DDE353CE0XX /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -182,6 +184,7 @@
 				XX0F1EE74CEE00BD635F77XX /* MLXVLM */,
 				XX11DD52CC5A0DD02102BEXX /* MLXLMCommon */,
 				XX30C36802834C82B626ABXX /* MLX */,
+				XX17F496E7391AF4178246XX /* Supabase */,
 			);
 			productName = WorkingKnowledge;
 			productReference = 105FC57A2E9EAD3100EA8BCF /* WorkingKnowledge.app */;
@@ -297,8 +300,9 @@
 			);
 			packageReferences = (
 				XX48581A749ACCC4EB88BEXX /* XCRemoteSwiftPackageReference "GRDB.swift" */,
-				XX759A5549C4E41A1F78CEXX /* XCRemoteSwiftPackageReference "mlx-swift-examples" */,
+				XX759A5549C4E41A1F78CEXX /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
 				XXC22B2B42B57690698642XX /* XCRemoteSwiftPackageReference "mlx-swift" */,
+				XXA26CCC1C14E04A80BED3XX /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 		};
 /* End PBXProject section */
@@ -762,12 +766,20 @@
 				minimumVersion = 7.0.0;
 			};
 		};
-		XX759A5549C4E41A1F78CEXX /* XCRemoteSwiftPackageReference "mlx-swift-examples" */ = {
+		XX759A5549C4E41A1F78CEXX /* XCRemoteSwiftPackageReference "mlx-swift-lm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm.git";
 			requirement = {
 				kind = exactVersion;
 				version = 2.31.3;
+			};
+		};
+		XXA26CCC1C14E04A80BED3XX /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.10.0;
 			};
 		};
 		XXC22B2B42B57690698642XX /* XCRemoteSwiftPackageReference "mlx-swift" */ = {
@@ -783,13 +795,18 @@
 /* Begin XCSwiftPackageProductDependency section */
 		XX0F1EE74CEE00BD635F77XX /* MLXVLM */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = XX759A5549C4E41A1F78CEXX /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			package = XX759A5549C4E41A1F78CEXX /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
 			productName = MLXVLM;
 		};
 		XX11DD52CC5A0DD02102BEXX /* MLXLMCommon */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = XX759A5549C4E41A1F78CEXX /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			package = XX759A5549C4E41A1F78CEXX /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
 			productName = MLXLMCommon;
+		};
+		XX17F496E7391AF4178246XX /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = XXA26CCC1C14E04A80BED3XX /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
 		};
 		XX30C36802834C82B626ABXX /* MLX */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -798,7 +815,7 @@
 		};
 		XX311F8854203ECF290F9FXX /* MLXLLM */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = XX759A5549C4E41A1F78CEXX /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			package = XX759A5549C4E41A1F78CEXX /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
 			productName = MLXLLM;
 		};
 		XXFEF62212299F5A9FBB8EXX /* GRDB */ = {

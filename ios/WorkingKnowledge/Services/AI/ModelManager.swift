@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import Helpers
 
 /// Owns the model services, their download/load lifecycle, and the
 /// background indexer. The Model Manager screen renders straight off this.
@@ -32,6 +33,7 @@ final class ModelManager {
     private let store: PalaceStore
     private let database: AppDatabase
     private var loadTasks: [ModelRole: Task<Void, Never>] = [:]
+    private var reporter: DebugReporter?
 
     init(store: PalaceStore, database: AppDatabase = .shared) {
         self.store = store
@@ -49,6 +51,12 @@ final class ModelManager {
                 await self?.indexing?.indexEntry(id: entryId)
             }
         }
+    }
+
+    /// Optional sink for model-load failures surfaced to the remote debug
+    /// backend. Wired by the app entry point once the reporter exists.
+    func attachReporter(_ reporter: DebugReporter) {
+        self.reporter = reporter
     }
 
     var totalBytesOnDisk: Int64 {
@@ -109,9 +117,26 @@ final class ModelManager {
                 self.phases[role] = .ready
                 self.refreshDiskState()
                 self.onModelBecameReady(role)
+                self.reporter?.report(
+                    kind: "model_load",
+                    severity: .info,
+                    source: "ModelManager",
+                    message: "loaded \(role)",
+                    payload: ["role": .string(String(describing: role))]
+                )
             } catch {
                 self.phases[role] = .failed(error.localizedDescription)
                 self.refreshDiskState()
+                self.reporter?.report(
+                    kind: "model_load_failed",
+                    severity: .error,
+                    source: "ModelManager",
+                    message: "failed to load \(role)",
+                    payload: [
+                        "role": .string(String(describing: role)),
+                        "error": .string(error.localizedDescription),
+                    ]
+                )
             }
             self.loadTasks[role] = nil
         }
