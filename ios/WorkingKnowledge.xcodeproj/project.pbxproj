@@ -13,7 +13,6 @@
 		XXA4CF05A96FF81C9CEF6CXX /* WorkingKnowledgeShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = XX71A9D667BB6A3FB86EDBXX /* WorkingKnowledgeShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		XXCDC52B63FDBCFEC4F541XX /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = XX30C36802834C82B626ABXX /* MLX */; };
 		XXDE7FA8271EC80D92A2FEXX /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = XX311F8854203ECF290F9FXX /* MLXLLM */; };
-		XXE43D391E1A80F391F32AXX /* MLXEmbedders in Frameworks */ = {isa = PBXBuildFile; productRef = XXF8B6ABE541D27EF0589AXX /* MLXEmbedders */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -105,7 +104,6 @@
 				XX84EABC864F37AAF2FFB5XX /* GRDB in Frameworks */,
 				XXDE7FA8271EC80D92A2FEXX /* MLXLLM in Frameworks */,
 				XX7FBC0B160A2EAFF735FFXX /* MLXVLM in Frameworks */,
-				XXE43D391E1A80F391F32AXX /* MLXEmbedders in Frameworks */,
 				XX9750E07390B9A256B5A8XX /* MLXLMCommon in Frameworks */,
 				XXCDC52B63FDBCFEC4F541XX /* MLX in Frameworks */,
 			);
@@ -182,7 +180,6 @@
 				XXFEF62212299F5A9FBB8EXX /* GRDB */,
 				XX311F8854203ECF290F9FXX /* MLXLLM */,
 				XX0F1EE74CEE00BD635F77XX /* MLXVLM */,
-				XXF8B6ABE541D27EF0589AXX /* MLXEmbedders */,
 				XX11DD52CC5A0DD02102BEXX /* MLXLMCommon */,
 				XX30C36802834C82B626ABXX /* MLX */,
 			);
@@ -803,11 +800,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = XX759A5549C4E41A1F78CEXX /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
 			productName = MLXLLM;
-		};
-		XXF8B6ABE541D27EF0589AXX /* MLXEmbedders */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = XX759A5549C4E41A1F78CEXX /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
-			productName = MLXEmbedders;
 		};
 		XXFEF62212299F5A9FBB8EXX /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;

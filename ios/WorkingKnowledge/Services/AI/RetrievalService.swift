@@ -1,12 +1,15 @@
 import Foundation
 
-/// Hybrid retrieval: keyword (FTS5/BM25), text-semantic, image-semantic, and
-/// a temporal list all get ranked independently, then fused with Reciprocal
-/// Rank Fusion — never by comparing raw scores. That last part matters
-/// because the text and image vectors live in two different, incomparable
-/// spaces (an EmbeddingGemma text vector and a Qwen3-VL-Embedding image
-/// vector aren't coordinates in the same universe), so RRF's "combine
-/// rankings, not scores" is the only mathematically safe way to merge them.
+/// Hybrid retrieval: keyword (FTS5/BM25), semantic (text + image in one
+/// shared space), and a temporal list all get ranked independently, then
+/// fused with Reciprocal Rank Fusion — never by comparing raw scores.
+///
+/// Because Qwen3-VL-Embedding embeds both text and images into the same
+/// vector space, a single text query vector is compared directly against
+/// both the entry-text vectors and the attachment-image vectors. RRF still
+/// merges the semantic list with the keyword and temporal lists (different
+/// ranking signals, incomparable scores), but the two semantic lists no
+/// longer need separate fusion — they share a query and a space.
 final class RetrievalService {
     struct ScoredEntry: Identifiable {
         let entry: Entry
@@ -29,28 +32,23 @@ final class RetrievalService {
 
     private let store: PalaceStore
     private let embedding: EmbeddingService
-    private let imageEmbedding: ImageEmbeddingService
     private let reranker: RerankerService
     private let indexing: IndexingService
 
     init(
         store: PalaceStore,
         embedding: EmbeddingService,
-        imageEmbedding: ImageEmbeddingService,
         reranker: RerankerService,
         indexing: IndexingService
     ) {
         self.store = store
         self.embedding = embedding
-        self.imageEmbedding = imageEmbedding
         self.reranker = reranker
         self.indexing = indexing
     }
 
-    /// Keyword + text-semantic + image-semantic + temporal retrieval fused
-    /// with RRF. `subjectId`, when set, scopes every one of the four lists
-    /// to that subject before fusion (wing scoping) — the plumbing the UI
-    /// doesn't expose yet, but `AskEngine.ask` already threads it through.
+    /// Keyword + semantic (text + image) + temporal retrieval fused with RRF.
+    /// `subjectId`, when set, scopes every list to that subject before fusion.
     func hybridCandidates(
         question: String, subjectId: String? = nil, limit: Int = 12
     ) async -> [ScoredEntry] {
@@ -62,34 +60,27 @@ final class RetrievalService {
             .map { $0.id }
             .filter { inScope($0, scopedEntryIds) }
 
+        // One shared query vector drives both the text and image semantic
+        // lists — they live in the same Qwen3-VL-Embedding space.
         var textVectorHits: [String] = []
-        if embedding.isReady {
-            let vectors = indexing.loadEntryVectors()
+        var imageVectorHits: [String] = []
+        if embedding.isReady,
+           let query = try? await embedding.embedOne(question, asQuery: true),
+           !query.isEmpty {
+            let entryVectors = indexing.loadEntryVectors()
                 .filter { inScope($0.id, scopedEntryIds) }
-            if !vectors.isEmpty,
-               let query = try? await embedding.embedOne(question, asQuery: true),
-               !query.isEmpty {
+            if !entryVectors.isEmpty {
                 textVectorHits = VectorMath
-                    .topMatches(query: query, among: vectors, limit: 24)
+                    .topMatches(query: query, among: entryVectors, limit: 24)
                     .filter { $0.score > 0.15 }
                     .map { $0.id }
             }
-        }
-
-        var imageVectorHits: [String] = []
-        if imageEmbedding.isReady {
             let imageVectors = indexing.loadImageVectors()
                 .filter { inScope($0.entryId, scopedEntryIds) }
                 .map { (id: $0.entryId, vector: $0.vector) }
-            if !imageVectors.isEmpty,
-               let queryText = try? await embedding.embedOne(question, asQuery: true),
-               !queryText.isEmpty {
-                // The text query and the image vectors live in different
-                // spaces, so this "query" is only used to rank within the
-                // image-semantic list itself — never compared against the
-                // text list's scores. Ranks (not scores) are all RRF sees.
+            if !imageVectors.isEmpty {
                 imageVectorHits = VectorMath
-                    .topMatches(query: queryText, among: imageVectors, limit: 24)
+                    .topMatches(query: query, among: imageVectors, limit: 24)
                     .filter { $0.score > 0.1 }
                     .map { $0.id }
             }

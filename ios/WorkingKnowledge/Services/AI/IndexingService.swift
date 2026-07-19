@@ -2,17 +2,15 @@ import Foundation
 import GRDB
 import Observation
 
-/// Keeps semantic vectors in sync with entries and attachments.
-/// Text is embedded the moment an entry is saved (when the embedder is
-/// loaded); attached photos get OCR immediately (still useful for keyword
-/// search) and are embedded directly into the visual-semantic space once the
-/// image embedder is loaded — no caption step in between.
+/// Keeps semantic vectors in sync with entries and attachments. Both entry
+/// text and attached images are embedded by the same Qwen3-VL-Embedding
+/// model, so they share one vector space — text queries can hit photo
+/// vectors directly, with no captioning step and no RRF between modalities.
 @Observable
 final class IndexingService {
     private unowned let store: PalaceStore
     private let database: AppDatabase
     private let embedding: EmbeddingService
-    private let imageEmbedding: ImageEmbeddingService
 
     private(set) var isIndexing = false
     private(set) var lastError: String?
@@ -20,13 +18,11 @@ final class IndexingService {
     init(
         store: PalaceStore,
         database: AppDatabase,
-        embedding: EmbeddingService,
-        imageEmbedding: ImageEmbeddingService
+        embedding: EmbeddingService
     ) {
         self.store = store
         self.database = database
         self.embedding = embedding
-        self.imageEmbedding = imageEmbedding
     }
 
     /// Number of entries that have no *current-model* semantic vector yet.
@@ -36,23 +32,22 @@ final class IndexingService {
     }
 
     /// Vectors on disk whose `model` column doesn't match the model this
-    /// build actually loads. Swapping EmbeddingGemma or Qwen3-VL-Embedding
-    /// for a different checkpoint doesn't crash anything — the schema always
-    /// recorded which model made each vector — but nothing checked it, so
-    /// old vectors would just silently stop being returned by any query that
-    /// filters on the current model id, and recall would quietly collapse.
-    /// This is what lets `ModelManagerView` surface a "reindex needed"
-    /// warning instead of that happening invisibly.
+    /// build actually loads. Swapping Qwen3-VL-Embedding for a different
+    /// checkpoint doesn't crash anything — the schema always recorded which
+    /// model made each vector — but nothing checked it, so old vectors
+    /// would just silently stop being returned by any query that filters on
+    /// the current model id, and recall would quietly collapse. This is
+    /// what lets `ModelManagerView` surface a "reindex needed" warning
+    /// instead of that happening invisibly.
     var staleVectorCount: Int {
         (try? database.dbQueue.read { db in
             try Int.fetchOne(
                 db,
                 sql: """
                     SELECT COUNT(*) FROM embedding
-                    WHERE (ownerKind = 'entry' AND model != ?)
-                       OR (ownerKind = 'attachmentImage' AND model != ?)
+                    WHERE model != ?
                     """,
-                arguments: [ModelCatalog.textEmbedding.hubId, ModelCatalog.imageEmbedding.hubId]
+                arguments: [ModelCatalog.embedding.hubId]
             )
         }) ?? 0
     }
@@ -62,7 +57,7 @@ final class IndexingService {
             try String.fetchSet(
                 db,
                 sql: "SELECT DISTINCT entryId FROM embedding WHERE ownerKind = 'entry' AND model = ?",
-                arguments: [ModelCatalog.textEmbedding.hubId]
+                arguments: [ModelCatalog.embedding.hubId]
             )
         }) ?? []
     }
@@ -84,29 +79,28 @@ final class IndexingService {
 
         let current = analyzedAny ? (store.entry(id: id) ?? entry) : entry
 
-        // 2. Embed every image attachment directly (device + image embedder only).
-        if imageEmbedding.isReady {
-            for attachment in current.attachments where attachment.kind == .image {
-                guard needsImageVector(attachmentId: attachment.id) else { continue }
-                do {
-                    let vector = try await imageEmbedding.embed(imageAt: attachment.fileURL)
-                    guard !vector.isEmpty else { continue }
-                    try storeVector(
-                        vector,
-                        entryId: current.id,
-                        ownerKind: "attachmentImage",
-                        ownerId: attachment.id,
-                        model: ModelCatalog.imageEmbedding.hubId
-                    )
-                } catch {
-                    lastError = error.localizedDescription
-                    print("[IndexingService] image embed failed: \(error)")
-                }
+        guard embedding.isReady else { return }
+
+        // 2. Embed every image attachment into the shared space.
+        for attachment in current.attachments where attachment.kind == .image {
+            guard needsVector(ownerKind: "attachmentImage", ownerId: attachment.id) else { continue }
+            do {
+                let vector = try await embedding.embed(imageAt: attachment.fileURL)
+                guard !vector.isEmpty else { continue }
+                try storeVector(
+                    vector,
+                    entryId: current.id,
+                    ownerKind: "attachmentImage",
+                    ownerId: attachment.id,
+                    model: ModelCatalog.embedding.hubId
+                )
+            } catch {
+                lastError = error.localizedDescription
+                print("[IndexingService] image embed failed: \(error)")
             }
         }
 
-        // 3. Semantic vector for the entry text (device + text embedder only).
-        guard embedding.isReady else { return }
+        // 3. Semantic vector for the entry text.
         do {
             let vector = try await embedding.embedOne(current.embeddingText, asQuery: false)
             guard !vector.isEmpty else { return }
@@ -115,7 +109,7 @@ final class IndexingService {
                 entryId: current.id,
                 ownerKind: "entry",
                 ownerId: current.id,
-                model: ModelCatalog.textEmbedding.hubId
+                model: ModelCatalog.embedding.hubId
             )
             lastError = nil
         } catch {
@@ -124,21 +118,21 @@ final class IndexingService {
         }
     }
 
-    private func needsImageVector(attachmentId: String) -> Bool {
+    private func needsVector(ownerKind: String, ownerId: String) -> Bool {
         let existingModel = try? database.dbQueue.read { db in
             try String.fetchOne(
                 db,
-                sql: "SELECT model FROM embedding WHERE ownerKind = 'attachmentImage' AND ownerId = ?",
-                arguments: [attachmentId]
+                sql: "SELECT model FROM embedding WHERE ownerKind = ? AND ownerId = ?",
+                arguments: [ownerKind, ownerId]
             )
         }
-        return existingModel.flatMap { $0 } != ModelCatalog.imageEmbedding.hubId
+        return existingModel.flatMap { $0 } != ModelCatalog.embedding.hubId
     }
 
     /// Embeds every entry that doesn't have a current-model vector yet (or
     /// all, if forced).
     func reindexAll(force: Bool = false) async {
-        guard embedding.isReady || imageEmbedding.isReady else { return }
+        guard embedding.isReady else { return }
         isIndexing = true
         defer { isIndexing = false }
 
@@ -152,7 +146,7 @@ final class IndexingService {
     }
 
     func indexMissing() async {
-        guard embedding.isReady || imageEmbedding.isReady else { return }
+        guard embedding.isReady else { return }
         isIndexing = true
         defer { isIndexing = false }
 
@@ -161,14 +155,13 @@ final class IndexingService {
             try String.fetchSet(
                 db,
                 sql: "SELECT DISTINCT ownerId FROM embedding WHERE ownerKind = 'attachmentImage' AND model = ?",
-                arguments: [ModelCatalog.imageEmbedding.hubId]
+                arguments: [ModelCatalog.embedding.hubId]
             )
         }) ?? []
 
         for entry in store.allEntries {
-            let needsText = embedding.isReady && !indexedText.contains(entry.id)
-            let needsImages = imageEmbedding.isReady
-                && entry.attachments.contains { $0.kind == .image && !indexedImages.contains($0.id) }
+            let needsText = !indexedText.contains(entry.id)
+            let needsImages = entry.attachments.contains { $0.kind == .image && !indexedImages.contains($0.id) }
             guard needsText || needsImages else { continue }
             await indexEntry(id: entry.id)
         }
@@ -180,7 +173,7 @@ final class IndexingService {
             let records = (try? AppDatabase.shared.dbQueue.read { db in
                 try EmbeddingRecord
                     .filter(Column("ownerKind") == "entry")
-                    .filter(Column("model") == ModelCatalog.textEmbedding.hubId)
+                    .filter(Column("model") == ModelCatalog.embedding.hubId)
                     .fetchAll(db)
             }) ?? []
             return records.map { (id: $0.entryId, vector: $0.floats) }
@@ -195,7 +188,7 @@ final class IndexingService {
             let records = (try? AppDatabase.shared.dbQueue.read { db in
                 try EmbeddingRecord
                     .filter(Column("ownerKind") == "attachmentImage")
-                    .filter(Column("model") == ModelCatalog.imageEmbedding.hubId)
+                    .filter(Column("model") == ModelCatalog.embedding.hubId)
                     .fetchAll(db)
             }) ?? []
             return records.map { (id: $0.ownerId, entryId: $0.entryId, vector: $0.floats) }

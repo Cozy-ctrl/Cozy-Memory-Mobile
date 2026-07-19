@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// Owns the four model services, their download/load lifecycle, and the
+/// Owns the model services, their download/load lifecycle, and the
 /// background indexer. The Model Manager screen renders straight off this.
 @Observable
 final class ModelManager {
@@ -27,7 +27,6 @@ final class ModelManager {
     let embedding = EmbeddingService()
     let reranker = RerankerService()
     let synthesis = SynthesisService()
-    let imageEmbedding = ImageEmbeddingService()
     private(set) var indexing: IndexingService?
 
     private let store: PalaceStore
@@ -40,8 +39,7 @@ final class ModelManager {
         let indexer = IndexingService(
             store: store,
             database: database,
-            embedding: embedding,
-            imageEmbedding: imageEmbedding
+            embedding: embedding
         )
         indexing = indexer
         refreshDiskState()
@@ -67,9 +65,7 @@ final class ModelManager {
 
     /// True when the semantic pipeline can answer questions (embedder + LLM).
     var canAnswerLocally: Bool {
-        embedding.isReady || synthesis.isReady
-            ? synthesis.isReady
-            : false
+        synthesis.isReady
     }
 
     func refreshDiskState() {
@@ -89,8 +85,7 @@ final class ModelManager {
 
     private func isLoaded(_ role: ModelRole) -> Bool {
         switch role {
-        case .textEmbedding: return embedding.isReady
-        case .imageEmbedding: return imageEmbedding.isReady
+        case .embedding: return embedding.isReady
         case .reranker: return reranker.isReady
         case .synthesis: return synthesis.isReady
         }
@@ -148,16 +143,14 @@ final class ModelManager {
             }
         }
         switch role {
-        case .textEmbedding: try await embedding.load(progressHandler: handler)
-        case .imageEmbedding: try await imageEmbedding.load(progressHandler: handler)
+        case .embedding: try await embedding.load(progressHandler: handler)
         case .reranker: try await reranker.load(progressHandler: handler)
         case .synthesis: try await synthesis.load(progressHandler: handler)
         }
     }
 
     private func onModelBecameReady(_ role: ModelRole) {
-        // New capability — refresh the semantic index in the background.
-        if role == .textEmbedding || role == .imageEmbedding {
+        if role == .embedding {
             Task { @MainActor in
                 await indexing?.indexMissing()
             }
@@ -176,8 +169,7 @@ final class ModelManager {
         loadTasks[role]?.cancel()
         loadTasks[role] = nil
         switch role {
-        case .textEmbedding: embedding.unload()
-        case .imageEmbedding: imageEmbedding.unload()
+        case .embedding: embedding.unload()
         case .reranker: reranker.unload()
         case .synthesis: synthesis.unload()
         }

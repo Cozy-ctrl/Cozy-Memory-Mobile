@@ -1,9 +1,10 @@
 import Foundation
 
-/// The four on-device models powering Ask Palace.
+/// The on-device models powering Ask Palace. The text and image embedding
+/// roles collapse into one — Qwen3-VL-Embedding-2B handles both modalities
+/// in a single shared vector space.
 nonisolated enum ModelRole: String, CaseIterable, Identifiable {
-    case textEmbedding
-    case imageEmbedding
+    case embedding
     case reranker
     case synthesis
 
@@ -11,8 +12,7 @@ nonisolated enum ModelRole: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .textEmbedding: return "EmbeddingGemma 300M"
-        case .imageEmbedding: return "Qwen3-VL-Embedding 2B"
+        case .embedding: return "Qwen3-VL-Embedding 2B"
         case .reranker: return "Qwen3 Reranker 0.6B"
         case .synthesis: return "Qwen3 1.7B"
         }
@@ -20,8 +20,7 @@ nonisolated enum ModelRole: String, CaseIterable, Identifiable {
 
     var purpose: String {
         switch self {
-        case .textEmbedding: return "Turns every learning into a semantic vector for meaning-based search."
-        case .imageEmbedding: return "Embeds attached photos directly into a visual-semantic vector — no captioning step."
+        case .embedding: return "Turns every learning and attached photo into a semantic vector — text and images in one shared space, so a text query can find a photo directly."
         case .reranker: return "Re-scores retrieved entries by true relevance to your question."
         case .synthesis: return "Writes the final answer from your own learnings, with citations."
         }
@@ -29,8 +28,7 @@ nonisolated enum ModelRole: String, CaseIterable, Identifiable {
 
     var symbol: String {
         switch self {
-        case .textEmbedding: return "point.3.connected.trianglepath.dotted"
-        case .imageEmbedding: return "photo.on.rectangle.angled"
+        case .embedding: return "point.3.connected.trianglepath.dotted"
         case .reranker: return "arrow.up.arrow.down"
         case .synthesis: return "text.bubble"
         }
@@ -82,13 +80,8 @@ nonisolated struct ModelSpec: Identifiable, Hashable {
 }
 
 nonisolated enum ModelCatalog {
-    static let textEmbedding = ModelSpec(
-        role: .textEmbedding,
-        hubId: "mlx-community/embeddinggemma-300m-4bit",
-        approxBytes: 250_000_000
-    )
-    static let imageEmbedding = ModelSpec(
-        role: .imageEmbedding,
+    static let embedding = ModelSpec(
+        role: .embedding,
         hubId: "mlx-community/Qwen3-VL-Embedding-2B-4bit",
         approxBytes: 1_300_000_000
     )
@@ -103,12 +96,11 @@ nonisolated enum ModelCatalog {
         approxBytes: 1_000_000_000
     )
 
-    static let all: [ModelSpec] = [textEmbedding, synthesis, reranker, imageEmbedding]
+    static let all: [ModelSpec] = [embedding, synthesis, reranker]
 
     static func spec(for role: ModelRole) -> ModelSpec {
         switch role {
-        case .textEmbedding: return textEmbedding
-        case .imageEmbedding: return imageEmbedding
+        case .embedding: return embedding
         case .reranker: return reranker
         case .synthesis: return synthesis
         }

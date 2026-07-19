@@ -165,8 +165,7 @@ struct DebugTopBar: View {
 
     private func shortName(_ role: ModelRole) -> String {
         switch role {
-        case .textEmbedding: return "Embed"
-        case .imageEmbedding: return "Image"
+        case .embedding: return "Embed"
         case .reranker: return "Rerank"
         case .synthesis: return "Qwen3"
         }

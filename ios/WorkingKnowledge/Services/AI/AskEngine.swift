@@ -34,13 +34,11 @@ final class AskEngine {
         self.retrieval = RetrievalService(
             store: store,
             embedding: models.embedding,
-            imageEmbedding: models.imageEmbedding,
             reranker: models.reranker,
             indexing: models.indexing ?? IndexingService(
                 store: store,
                 database: .shared,
-                embedding: models.embedding,
-                imageEmbedding: models.imageEmbedding
+                embedding: models.embedding
             )
         )
     }

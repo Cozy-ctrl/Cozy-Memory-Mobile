@@ -230,7 +230,7 @@ struct ModelManagerView: View {
     private var indexCard: some View {
         let unindexed = models.indexing?.unindexedCount ?? 0
         let stale = models.indexing?.staleVectorCount ?? 0
-        let canReindex = models.embedding.isReady || models.imageEmbedding.isReady
+        let canReindex = models.embedding.isReady
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {

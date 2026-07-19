@@ -6,8 +6,8 @@ import Foundation
 /// scan beats any index in simplicity and is instant.
 ///
 /// Every vector this app stores is normalized to unit length at write time
-/// (`normalized(_:)`, applied by both `EmbeddingService` and
-/// `ImageEmbeddingService`). For unit vectors, cosine similarity and dot
+/// (`normalized(_:)`, applied by `EmbeddingService` for both text and
+/// image vectors). For unit vectors, cosine similarity and dot
 /// product are the same number — dot product just skips recomputing both
 /// norms on every comparison, which matters when the same query gets
 /// scanned against every stored vector.
